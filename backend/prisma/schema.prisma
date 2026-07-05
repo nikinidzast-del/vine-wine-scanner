@@ -1,0 +1,65 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String   @id @default(uuid())
+  firebaseUid       String   @unique
+  email             String   @unique
+  createdAt         DateTime @default(now())
+  preferredWineType String?
+  subscriptionStatus String  @default("free")
+  onboarded         Boolean  @default(false)
+
+  scans     WineScan[]
+  scanUsage ScanUsage?
+}
+
+model ScanUsage {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id])
+  scanCount   Int      @default(0)
+  periodStart DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+}
+
+model WineScan {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  imageUrl    String?
+  wineName    String?
+  producer    String?
+  vintage     String?
+  grapeVariety String?
+  region      String?
+  abv         String?
+  priceRange  String?
+  priceConfidence String?
+  reviewSummary String?
+  wineryStory String?
+  confidence  String?
+  rawResponse String?
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+}
+
+model WinesCache {
+  id               String   @id @default(uuid())
+  normalizedName   String
+  producer         String?
+  vintage          String?
+  geminiResultJson String
+  createdAt        DateTime @default(now())
+
+  @@unique([normalizedName, producer, vintage])
+  @@index([normalizedName, producer])
+}

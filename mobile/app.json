@@ -1,0 +1,41 @@
+{
+  "expo": {
+    "name": "Vino",
+    "slug": "vino-wine-scanner",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "backgroundColor": "#0D0D0D"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.vinowine.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Camera access is needed to scan wine labels",
+        "NSPhotoLibraryUsageDescription": "Photo library access is needed to scan wine labels from your gallery"
+      }
+    },
+    "android": {
+      "package": "com.vinowine.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#0D0D0D",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "permissions": ["CAMERA", "READ_EXTERNAL_STORAGE", "com.android.vending.BILLING"]
+    },
+    "plugins": [
+      "expo-camera",
+      "expo-image-picker",
+      "react-native-iap"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "vino-wine-scanner"
+      }
+    }
+  }
+}
