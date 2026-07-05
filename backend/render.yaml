@@ -11,6 +11,8 @@ services:
           property: connectionString
       - key: FIREBASE_PROJECT_ID
         sync: false
+      - key: FIREBASE_CREDENTIALS_PATH
+        sync: false
       - key: FIREBASE_CLIENT_EMAIL
         sync: false
       - key: FIREBASE_PRIVATE_KEY
