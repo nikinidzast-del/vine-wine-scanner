@@ -24,6 +24,13 @@ export type SubscriptionTier = 'monthly' | 'yearly';
 const isAndroid = Platform.OS === 'android';
 
 export async function purchaseSubscription(tier: SubscriptionTier): Promise<boolean> {
+  if (__DEV__) {
+    try {
+      await api.user.updatePremiumStatus(true);
+    } catch {}
+    return true;
+  }
+
   try {
     const RNIap = await import('react-native-iap');
     const productId = PRODUCTS[tier];
@@ -54,6 +61,8 @@ export async function purchaseSubscription(tier: SubscriptionTier): Promise<bool
 }
 
 export async function purchaseCredits(): Promise<boolean> {
+  if (__DEV__) return true;
+
   try {
     const RNIap = await import('react-native-iap');
     const productId = PRODUCTS.credits10;
@@ -83,6 +92,8 @@ export async function purchaseCredits(): Promise<boolean> {
 }
 
 export async function restorePurchases(): Promise<boolean> {
+  if (__DEV__) return true;
+
   try {
     const RNIap = await import('react-native-iap');
 
