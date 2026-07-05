@@ -13,7 +13,7 @@ export async function setOnboardingComplete() {
   await AsyncStorage.setItem(ONBOARDING_KEY, 'true');
   try {
     await api.auth.markOnboarded();
-  } catch {}
+  } catch (e) { console.warn('Failed to mark onboarding on server', e); }
 }
 
 export async function getStoredToken(): Promise<string | null> {

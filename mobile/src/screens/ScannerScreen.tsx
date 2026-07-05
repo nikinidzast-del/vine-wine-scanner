@@ -33,7 +33,7 @@ export function ScannerScreen() {
     try {
       const data = await api.user.getQuota();
       setQuota(data);
-    } catch {}
+    } catch (e) { console.warn('Failed to load quota', e); }
   };
 
   const handleScan = async (imageUri: string) => {

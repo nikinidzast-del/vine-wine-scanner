@@ -54,7 +54,7 @@ export function SettingsScreen({ navigation }: Props) {
     try {
       const stored = await AsyncStorage.getItem(CURRENCY_KEY);
       if (stored) setCurrentCurrency(stored);
-    } catch {}
+    } catch (e) { console.warn('Failed to load currency', e); }
   };
 
   const handleChangeLanguage = async (code: string) => {
@@ -64,7 +64,7 @@ export function SettingsScreen({ navigation }: Props) {
       setCurrentCurrency(currency);
       try {
         await AsyncStorage.setItem(CURRENCY_KEY, currency);
-      } catch {}
+      } catch (e) { console.warn('Failed to save currency', e); }
     }
   };
 
@@ -72,7 +72,7 @@ export function SettingsScreen({ navigation }: Props) {
     setCurrentCurrency(code);
     try {
       await AsyncStorage.setItem(CURRENCY_KEY, code);
-    } catch {}
+    } catch (e) { console.warn('Failed to save currency', e); }
   };
 
   const getFlag = (code: string) => {
@@ -207,7 +207,7 @@ export function SettingsScreen({ navigation }: Props) {
           <View style={styles.legalOptions}>
             <TouchableOpacity
               style={styles.legalRow}
-              onPress={() => Linking.openURL('https://vinowine.app/terms')}
+              onPress={() => Linking.openURL('https://vino-scanner.onrender.com/terms')}
               activeOpacity={0.7}
             >
               <Text style={styles.legalText}>{t('settings.terms_of_service')}</Text>
@@ -216,7 +216,7 @@ export function SettingsScreen({ navigation }: Props) {
             <View style={styles.legalDivider} />
             <TouchableOpacity
               style={styles.legalRow}
-              onPress={() => Linking.openURL('https://vinowine.app/privacy')}
+              onPress={() => Linking.openURL('https://vino-scanner.onrender.com/privacy')}
               activeOpacity={0.7}
             >
               <Text style={styles.legalText}>{t('settings.privacy_policy')}</Text>

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, ActivityIndicator, StyleSheet, Linking, Alert } from 'react-native';
 import { colors, fonts } from '../theme';
 import { getStoredToken } from '../services/auth';
 import { setAuthToken } from '../services/api';
@@ -21,6 +21,7 @@ import { PaywallScreen } from '../screens/PaywallScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { purchaseSubscription, restorePurchases } from '../services/billing';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -120,6 +121,7 @@ const navTheme = {
 export function AppNavigator() {
   const [appState, setAppState] = useState<AppState>('loading');
   const [user, setUser] = useState<any>(null);
+  const [purchasing, setPurchasing] = useState(false);
 
   useEffect(() => {
     bootstrap();
@@ -186,13 +188,50 @@ export function AppNavigator() {
     setAppState('main');
   };
 
-  const handleStartTrial = (tier: string) => {
-    // TODO: connect to IAP billing
-    setAppState('postAuth');
+  const handleStartTrial = async (tier: string) => {
+    if (purchasing) return;
+    setPurchasing(true);
+    try {
+      const success = await purchaseSubscription(tier as 'monthly' | 'yearly');
+      if (success) {
+        setAppState('postAuth');
+      }
+    } catch (e: any) {
+      Alert.alert('Purchase failed', e?.message || 'An error occurred');
+    } finally {
+      setPurchasing(false);
+    }
   };
 
-  const handleUpgrade = () => {
-    setAppState('main');
+  const handleRestore = async () => {
+    const restored = await restorePurchases();
+    if (restored) {
+      Alert.alert('Restored', 'Your purchases have been restored');
+      setAppState('main');
+    }
+  };
+
+  const handleTerms = () => {
+    Linking.openURL('https://vino-scanner.onrender.com/terms');
+  };
+
+  const handlePrivacy = () => {
+    Linking.openURL('https://vino-scanner.onrender.com/privacy');
+  };
+
+  const handleUpgrade = async () => {
+    if (purchasing) return;
+    setPurchasing(true);
+    try {
+      const success = await purchaseSubscription('monthly');
+      if (success) {
+        Alert.alert('Welcome to Premium', 'Thank you for your purchase');
+      }
+    } catch (e: any) {
+      Alert.alert('Purchase failed', e?.message || 'An error occurred');
+    } finally {
+      setPurchasing(false);
+    }
   };
 
   if (appState === 'loading') {
@@ -209,9 +248,10 @@ export function AppNavigator() {
         <StatusBar style="light" />
         <PaywallScreen
           onStartTrial={handleStartTrial}
-          onRestore={() => {}}
-          onTerms={() => {}}
-          onPrivacy={() => {}}
+          onRestore={handleRestore}
+          onTerms={handleTerms}
+          onPrivacy={handlePrivacy}
+          loading={purchasing}
         />
       </>
     );
@@ -282,10 +322,11 @@ export function AppNavigator() {
                 {({ navigation: nav }) => (
                   <PaywallScreen
                     onStartTrial={handleStartTrial}
-                    onRestore={() => {}}
-                    onTerms={() => {}}
-                    onPrivacy={() => {}}
+                    onRestore={handleRestore}
+                    onTerms={handleTerms}
+                    onPrivacy={handlePrivacy}
                     onClose={() => nav.goBack()}
+                    loading={purchasing}
                   />
                 )}
               </Stack.Screen>

@@ -83,7 +83,7 @@ export function OnboardingScreen({ onComplete, onSkip, onGuestContinue, onGoogle
       const currency = langToCurrency[code] || 'usd';
       try {
         await AsyncStorage.setItem(CURRENCY_KEY, currency);
-      } catch {}
+      } catch (e) { console.warn('Failed to save currency preference', e); }
     }
   };
 

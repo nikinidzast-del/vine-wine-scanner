@@ -27,14 +27,14 @@ export async function getCurrencyConfig(): Promise<CurrencyConfig> {
   try {
     const stored = await AsyncStorage.getItem(CURRENCY_KEY);
     if (stored && currencies[stored]) return currencies[stored];
-  } catch {}
+  } catch (e) { console.warn('Failed to read stored currency', e); }
 
   try {
     const storedLang = await AsyncStorage.getItem(LANG_KEY);
     if (storedLang && langToCurrency[storedLang]) {
       return currencies[langToCurrency[storedLang]];
     }
-  } catch {}
+  } catch (e) { console.warn('Failed to read stored language for currency', e); }
 
   const lang = i18n.language || 'en';
   const code = langToCurrency[lang] || 'usd';

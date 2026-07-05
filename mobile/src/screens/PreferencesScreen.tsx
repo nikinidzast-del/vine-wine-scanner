@@ -42,7 +42,7 @@ export function PreferencesScreen({ onComplete, onSkip }: Props) {
     setSaving(true);
     try {
       await api.user.updatePreferences(selected);
-    } catch {}
+    } catch (e) { console.warn('Failed to save preferences', e); }
     onComplete();
   };
 

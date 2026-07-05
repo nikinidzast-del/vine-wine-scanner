@@ -40,7 +40,7 @@ export function ProfileScreen({ navigation }: Props) {
     try {
       const { user: data } = await api.auth.getMe();
       setUser(data);
-    } catch {
+    } catch (e) { console.error('Failed to load user', e);
     } finally {
       setLoading(false);
     }
@@ -101,7 +101,7 @@ export function ProfileScreen({ navigation }: Props) {
     try {
       await api.user.updatePreferences(type);
       setUser((prev) => (prev ? { ...prev, preferredWineType: type } : prev));
-    } catch {}
+    } catch (e) { console.warn('Failed to update preference', e); }
   };
 
   const isPremium = user?.subscriptionStatus === 'premium';

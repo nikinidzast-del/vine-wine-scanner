@@ -16,7 +16,7 @@ const initLang = async () => {
   try {
     const stored = await AsyncStorage.getItem(STORAGE_KEY);
     if (stored) return stored;
-  } catch {}
+  } catch (e) { console.warn('Failed to read stored language', e); }
 
   if (['sr', 'hr', 'bs'].includes(deviceLanguage)) return 'sr';
   if (deviceLanguage === 'it') return 'it';
@@ -28,7 +28,7 @@ export const changeLanguage = async (lang: string) => {
   await i18n.changeLanguage(lang);
   try {
     await AsyncStorage.setItem(STORAGE_KEY, lang);
-  } catch {}
+  } catch (e) { console.warn('Failed to persist language preference', e); }
 };
 
 initLang().then((lng) => {
