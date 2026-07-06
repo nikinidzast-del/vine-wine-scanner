@@ -12,7 +12,8 @@ import { useTranslation } from 'react-i18next';
 import { colors, fonts, fontSizes, spacing, borderRadius } from '../theme';
 import { FrostedCard } from '../components/FrostedCard';
 import { BottleSilhouette } from '../components/BottleSilhouette';
-import { api } from '../services/api';
+import { getScanById } from '../services/firestoreService';
+import { getFirebaseAuth } from '../services/auth';
 
 interface WineScan {
   id: string;
@@ -49,7 +50,7 @@ export function ScanResultScreen({ route, navigation }: any) {
 
   const loadScan = async () => {
     try {
-      const { scan: data } = await api.scan.getById(scanId);
+      const data = await getScanById(scanId);
       setScan(data);
     } catch {
       navigation.goBack();

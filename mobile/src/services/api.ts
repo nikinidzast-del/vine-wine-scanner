@@ -1,66 +1,6 @@
-import { Platform } from 'react-native';
+const VERCEl_SCAN_URL = 'https://vino-scanner-api.vercel.app/api/scan';
 
-const PROD_API_URL = 'https://vino-scanner.onrender.com';
-
-const BASE_URL = __DEV__
-  ? Platform.select({
-      android: 'http://127.0.0.1:3002',
-      ios: 'http://localhost:3002',
-      default: 'http://localhost:3002',
-    })
-  : PROD_API_URL;
-
-let authToken: string | null = null;
-
-export function setAuthToken(token: string | null) {
-  authToken = token;
-}
-
-async function request<T>(
-  endpoint: string,
-  options: RequestInit = {}
-): Promise<T> {
-  const headers: Record<string, string> = {
-    ...(options.headers as Record<string, string>),
-  };
-
-  if (authToken) {
-    headers['Authorization'] = `Bearer ${authToken}`;
-  }
-
-  if (!(options.body instanceof FormData)) {
-    headers['Content-Type'] = 'application/json';
-  }
-
-  const response = await fetch(`${BASE_URL}${endpoint}`, {
-    ...options,
-    headers,
-  });
-
-  if (response.status === 402) {
-    const body = await response.json();
-    throw new QuotaExceededError(body.resetsAt);
-  }
-
-  if (!response.ok) {
-    const body = await response.json().catch(() => ({}));
-    throw new ApiError(
-      body.error || `HTTP ${response.status}`,
-      response.status
-    );
-  }
-
-  return response.json();
-}
-
-export class ApiError extends Error {
-  status: number;
-  constructor(message: string, status: number) {
-    super(message);
-    this.status = status;
-    this.name = 'ApiError';
-  }
-}
+export function setAuthToken(token: string | null) {}
 
 export class QuotaExceededError extends Error {
   resetsAt: string;
@@ -71,85 +11,39 @@ export class QuotaExceededError extends Error {
   }
 }
 
-export const api = {
-  auth: {
-    firebaseLogin: (idToken: string) =>
-      request<{ user: any }>('/api/auth/firebase-login', {
-        method: 'POST',
-        body: JSON.stringify({ idToken }),
-      }),
-
-    getMe: () => request<{ user: any }>('/api/auth/me'),
-
-    markOnboarded: () =>
-      request<{ onboarded: boolean }>('/api/auth/onboarded', {
-        method: 'POST',
-      }),
-
-    deleteAccount: () =>
-      request<{ message: string }>('/api/auth/delete-account', {
-        method: 'POST',
-      }),
-  },
-
-  scan: {
-    upload: (imageUri: string, language?: string) => {
-      return new Promise<{ scan: any; quota: { remaining: number; resetsAt: string } }>((resolve, reject) => {
-        const formData = new FormData();
-        formData.append('image', { uri: imageUri, name: 'label.jpg', type: 'image/jpeg' } as any);
-        if (language) formData.append('language', language);
-
-        const xhr = new XMLHttpRequest();
-        xhr.open('POST', `${BASE_URL}/api/scan`);
-
-        if (authToken) {
-          xhr.setRequestHeader('Authorization', `Bearer ${authToken}`);
-        }
-
-        xhr.onload = () => {
-          try {
-            const body = JSON.parse(xhr.responseText);
-            if (xhr.status === 402) {
-              reject(new QuotaExceededError(body.resetsAt));
-            } else if (xhr.status !== 200) {
-              reject(new ApiError(body.error || `HTTP ${xhr.status}`, xhr.status));
-            } else {
-              resolve(body);
-            }
-          } catch (e) {
-            reject(new ApiError('Invalid response', xhr.status));
-          }
-        };
-
-        xhr.onerror = () => reject(new ApiError('Network error', 0));
-        xhr.send(formData);
-      });
+export async function scanWine({
+  image,
+  mimeType,
+  language,
+  idToken,
+}: {
+  image: string;
+  mimeType?: string;
+  language?: string;
+  idToken: string;
+}): Promise<{ scan: any; quota: { remaining: number; resetsAt: string | null } }> {
+  const response = await fetch(VERCEl_SCAN_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${idToken}`,
     },
+    body: JSON.stringify({
+      image,
+      mimeType: mimeType || 'image/jpeg',
+      language: language || 'en',
+    }),
+  });
 
-    getHistory: (page: number = 1, limit: number = 20) =>
-      request<{ scans: any[]; pagination: any }>(
-        `/api/scan/history?page=${page}&limit=${limit}`
-      ),
+  const body = await response.json();
 
-    getById: (id: string) =>
-      request<{ scan: any }>(`/api/scan/${id}`),
-  },
+  if (response.status === 402) {
+    throw new QuotaExceededError(body.resetsAt);
+  }
 
-  user: {
-    updatePreferences: (preferredWineType: string) =>
-      request<{ preferredWineType: string }>('/api/user/preferences', {
-        method: 'PATCH',
-        body: JSON.stringify({ preferredWineType }),
-      }),
+  if (!response.ok) {
+    throw new Error(body.error || `HTTP ${response.status}`);
+  }
 
-    getQuota: () => request<{ allowed: boolean; remaining: number; resetsAt: string | null }>(
-      '/api/user/quota'
-    ),
-
-    updatePremiumStatus: (isPremium: boolean) =>
-      request<{ subscriptionStatus: string }>('/api/user/premium-status', {
-        method: 'POST',
-        body: JSON.stringify({ isPremium }),
-      }),
-  },
-};
+  return body;
+}

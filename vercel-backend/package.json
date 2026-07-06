@@ -1,0 +1,15 @@
+{
+  "name": "vino-scanner-api",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "vercel dev"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.6.0",
+    "@google/generative-ai": "^0.24.1"
+  },
+  "devDependencies": {
+    "@vercel/node": "^5.1.14"
+  }
+}

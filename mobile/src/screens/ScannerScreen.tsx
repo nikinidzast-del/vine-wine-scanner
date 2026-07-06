@@ -12,7 +12,9 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { useNavigation } from '@react-navigation/native';
 import { colors, fonts, fontSizes, spacing, borderRadius } from '../theme';
-import { api, QuotaExceededError } from '../services/api';
+import { scanWine, QuotaExceededError } from '../services/api';
+import { getQuota } from '../services/firestoreService';
+import { getFirebaseAuth } from '../services/auth';
 
 const { width } = Dimensions.get('window');
 const FRAME_SIZE = width * 0.72;
@@ -31,16 +33,27 @@ export function ScannerScreen() {
 
   const loadQuota = async () => {
     try {
-      const data = await api.user.getQuota();
+      const auth = getFirebaseAuth();
+      const user = auth.currentUser;
+      if (!user) return;
+      const data = await getQuota(user.uid);
       setQuota(data);
     } catch (e) { console.warn('Failed to load quota', e); }
   };
 
-  const handleScan = async (imageUri: string) => {
+  const handleScan = async (imageBase64: string) => {
     if (isScanning) return;
     setIsScanning(true);
     try {
-      const result = await api.scan.upload(imageUri, i18n.language);
+      const auth = getFirebaseAuth();
+      const user = auth.currentUser;
+      if (!user) throw new Error('Not authenticated');
+      const idToken = await user.getIdToken();
+      const result = await scanWine({
+        image: imageBase64,
+        language: i18n.language,
+        idToken,
+      });
       loadQuota();
       navigation.navigate('ScanResult', { scanId: result.scan.id });
     } catch (error) {
@@ -58,8 +71,8 @@ export function ScannerScreen() {
   const takePhoto = async () => {
     if (!cameraRef.current) return;
     try {
-      const photo = await cameraRef.current.takePictureAsync({ quality: 0.8, base64: false });
-      if (photo?.uri) handleScan(photo.uri);
+      const photo = await cameraRef.current.takePictureAsync({ quality: 0.6, base64: true });
+      if (photo?.base64) handleScan(photo.base64);
     } catch {
       Alert.alert(t('common.error'), t('scanner.error_no_image'));
     }
@@ -71,9 +84,13 @@ export function ScannerScreen() {
       Alert.alert('Permission needed', 'Gallery access is required');
       return;
     }
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 });
-    if (!result.canceled && result.assets[0]) {
-      handleScan(result.assets[0].uri);
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      quality: 0.6,
+      base64: true,
+    });
+    if (!result.canceled && result.assets[0]?.base64) {
+      handleScan(result.assets[0].base64);
     }
   };
 

@@ -10,7 +10,8 @@ import {
 import { useTranslation } from 'react-i18next';
 import { colors, fonts, fontSizes, spacing, borderRadius } from '../theme';
 import { BottleSilhouette } from '../components/BottleSilhouette';
-import { api } from '../services/api';
+import { updateUserPreferences } from '../services/firestoreService';
+import { getFirebaseAuth } from '../services/auth';
 
 const WINE_TYPES = ['red', 'white', 'rose', 'sparkling', 'any'] as const;
 
@@ -41,7 +42,11 @@ export function PreferencesScreen({ onComplete, onSkip }: Props) {
 
     setSaving(true);
     try {
-      await api.user.updatePreferences(selected);
+      const auth = getFirebaseAuth();
+      const fbUser = auth.currentUser;
+      if (fbUser) {
+        await updateUserPreferences(fbUser.uid, selected);
+      }
     } catch (e) { console.warn('Failed to save preferences', e); }
     onComplete();
   };

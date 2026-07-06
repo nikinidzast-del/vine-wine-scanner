@@ -14,7 +14,8 @@ import { useNavigation } from '@react-navigation/native';
 import { colors, fonts, fontSizes, spacing, borderRadius } from '../theme';
 import { FrostedCard } from '../components/FrostedCard';
 import { BottleSilhouette } from '../components/BottleSilhouette';
-import { api } from '../services/api';
+import { getScans } from '../services/firestoreService';
+import { getFirebaseAuth } from '../services/auth';
 import { WineScan } from '../types';
 
 export function HistoryScreen() {
@@ -33,13 +34,16 @@ export function HistoryScreen() {
 
   const loadHistory = async (pageNum = 1, isRefresh = false) => {
     try {
-      const data = await api.scan.getHistory(pageNum);
+      const auth = getFirebaseAuth();
+      const fbUser = auth.currentUser;
+      if (!fbUser) return;
+      const result = await getScans(fbUser.uid, pageNum);
       if (pageNum === 1) {
-        setScans(data.scans);
+        setScans(result.scans as any);
       } else {
-        setScans((prev) => [...prev, ...data.scans]);
+        setScans((prev) => [...prev, ...result.scans as any]);
       }
-      setTotalPages(data.pagination.totalPages);
+      setTotalPages(result.hasMore ? pageNum + 1 : pageNum);
       setPage(pageNum);
     } catch {
     } finally {

@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { View, Text, ActivityIndicator, StyleSheet, Linking, Alert } from 'react-native';
 import { colors, fonts } from '../theme';
-import { getStoredToken } from '../services/auth';
-import { setAuthToken } from '../services/api';
-import { api } from '../services/api';
+import { isOnboardingComplete, setOnboardingComplete, onAuthChange, getFirebaseAuth } from '../services/auth';
+import { ensureUserDoc, getUser, updatePremiumStatus } from '../services/firestoreService';
+import { purchaseSubscription, restorePurchases } from '../services/billing';
+import type { UserData } from '../services/firestoreService';
 
 import { SplashScreen } from '../screens/SplashScreen';
 import { OnboardingScreen } from '../screens/OnboardingScreen';
@@ -21,7 +22,7 @@ import { PaywallScreen } from '../screens/PaywallScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { purchaseSubscription, restorePurchases } from '../services/billing';
+import { deleteUser } from 'firebase/auth';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -120,41 +121,38 @@ const navTheme = {
 
 export function AppNavigator() {
   const [appState, setAppState] = useState<AppState>('loading');
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<UserData | null>(null);
   const [purchasing, setPurchasing] = useState(false);
 
-  useEffect(() => {
-    bootstrap();
-  }, []);
+  const bootstrapped = useRef(false);
 
-  const bootstrap = async () => {
-    try {
-      const token = await getStoredToken();
-      if (token) {
-        setAuthToken(token);
+  useEffect(() => {
+    const unsubscribe = onAuthChange(async (firebaseUser) => {
+      if (bootstrapped.current) return;
+      bootstrapped.current = true;
+      if (firebaseUser) {
         try {
-          const { user: userData } = await api.auth.getMe();
-          setUser(userData);
-          if (!userData.onboarded) {
-            await import('../services/auth').then((m) => m.setOnboardingComplete());
+          await ensureUserDoc(firebaseUser.uid, firebaseUser.email || '');
+          const userData = await getUser(firebaseUser.uid);
+          if (userData) {
+            setUser(userData);
+            if (!userData.onboarded) {
+              await setOnboardingComplete();
+            }
           }
           setAppState('main');
-          return;
         } catch {
-          // Token expired, continue to auth
+          setAppState('auth');
         }
+      } else {
+        const onboarded = await isOnboardingComplete();
+        setAppState(onboarded ? 'auth' : 'splash');
       }
-
-      const { isOnboardingComplete } = await import('../services/auth');
-      const onboarded = await isOnboardingComplete();
-      setAppState(onboarded ? 'auth' : 'splash');
-    } catch {
-      setAppState('splash');
-    }
-  };
+    });
+    return unsubscribe;
+  }, []);
 
   const handleSplashComplete = async () => {
-    const { isOnboardingComplete } = await import('../services/auth');
     const onboarded = await isOnboardingComplete();
     setAppState(onboarded ? 'auth' : 'onboarding');
   };
@@ -175,8 +173,15 @@ export function AppNavigator() {
     setAppState('auth');
   };
 
-  const handleAuthSuccess = async (userData: any) => {
-    setUser(userData);
+  const handleAuthSuccess = async () => {
+    const fbUser = getFirebaseAuth().currentUser;
+    if (fbUser) {
+      try {
+        await ensureUserDoc(fbUser.uid, fbUser.email || '');
+        const userData = await getUser(fbUser.uid);
+        if (userData) setUser(userData);
+      } catch {}
+    }
     setAppState('paywall');
   };
 
@@ -212,11 +217,11 @@ export function AppNavigator() {
   };
 
   const handleTerms = () => {
-    Linking.openURL('https://vino-scanner.onrender.com/terms');
+    Linking.openURL('https://vino-scanner-api.vercel.app/terms');
   };
 
   const handlePrivacy = () => {
-    Linking.openURL('https://vino-scanner.onrender.com/privacy');
+    Linking.openURL('https://vino-scanner-api.vercel.app/privacy');
   };
 
   const handleUpgrade = async () => {

@@ -207,7 +207,7 @@ export function SettingsScreen({ navigation }: Props) {
           <View style={styles.legalOptions}>
             <TouchableOpacity
               style={styles.legalRow}
-              onPress={() => Linking.openURL('https://vino-scanner.onrender.com/terms')}
+              onPress={() => Linking.openURL('https://vino-scanner-api.vercel.app/terms')}
               activeOpacity={0.7}
             >
               <Text style={styles.legalText}>{t('settings.terms_of_service')}</Text>
@@ -216,7 +216,7 @@ export function SettingsScreen({ navigation }: Props) {
             <View style={styles.legalDivider} />
             <TouchableOpacity
               style={styles.legalRow}
-              onPress={() => Linking.openURL('https://vino-scanner.onrender.com/privacy')}
+              onPress={() => Linking.openURL('https://vino-scanner-api.vercel.app/privacy')}
               activeOpacity={0.7}
             >
               <Text style={styles.legalText}>{t('settings.privacy_policy')}</Text>

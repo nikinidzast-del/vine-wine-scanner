@@ -1,0 +1,11 @@
+{
+  "functions": {
+    "api/scan.ts": {
+      "maxDuration": 15
+    }
+  },
+  "rewrites": [
+    { "source": "/privacy", "destination": "/api/privacy" },
+    { "source": "/terms", "destination": "/api/terms" }
+  ]
+}

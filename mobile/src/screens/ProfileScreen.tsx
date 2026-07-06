@@ -10,8 +10,8 @@ import {
 import { useTranslation } from 'react-i18next';
 import { colors, fonts, fontSizes, spacing, borderRadius } from '../theme';
 import { BottleSilhouette } from '../components/BottleSilhouette';
-import { api } from '../services/api';
-import { clearAuth } from '../services/auth';
+import { getUser, updateUserPreferences, deleteUserAccount } from '../services/firestoreService';
+import { getFirebaseAuth, signOut } from '../services/auth';
 import { restorePurchases } from '../services/billing';
 
 interface Props {
@@ -38,7 +38,10 @@ export function ProfileScreen({ navigation }: Props) {
 
   const loadUser = async () => {
     try {
-      const { user: data } = await api.auth.getMe();
+      const auth = getFirebaseAuth();
+      const fbUser = auth.currentUser;
+      if (!fbUser) return;
+      const data = await getUser(fbUser.uid);
       setUser(data);
     } catch (e) { console.error('Failed to load user', e);
     } finally {
@@ -53,7 +56,7 @@ export function ProfileScreen({ navigation }: Props) {
         text: t('profile.logout'),
         style: 'destructive',
         onPress: async () => {
-          await clearAuth();
+          await signOut();
           navigation.reset({ index: 0, routes: [{ name: 'Auth' }] });
         },
       },
@@ -68,8 +71,13 @@ export function ProfileScreen({ navigation }: Props) {
         style: 'destructive',
         onPress: async () => {
           try {
-            await api.auth.deleteAccount();
-            await clearAuth();
+            const auth = getFirebaseAuth();
+            const fbUser = auth.currentUser;
+            if (fbUser) {
+              await deleteUserAccount(fbUser.uid);
+              await fbUser.delete();
+            }
+            await signOut();
             Alert.alert(t('common.done'), t('profile.account_deleted'));
             navigation.reset({ index: 0, routes: [{ name: 'Auth' }] });
           } catch {
@@ -99,7 +107,10 @@ export function ProfileScreen({ navigation }: Props) {
 
   const handlePreferenceChange = async (type: string) => {
     try {
-      await api.user.updatePreferences(type);
+      const auth = getFirebaseAuth();
+      const fbUser = auth.currentUser;
+      if (!fbUser) return;
+      await updateUserPreferences(fbUser.uid, type);
       setUser((prev) => (prev ? { ...prev, preferredWineType: type } : prev));
     } catch (e) { console.warn('Failed to update preference', e); }
   };

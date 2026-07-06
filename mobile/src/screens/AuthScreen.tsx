@@ -14,12 +14,12 @@ import { useTranslation } from 'react-i18next';
 import { colors, fonts, fontSizes, spacing, borderRadius } from '../theme';
 import { Button } from '../components/Button';
 import { BottleSilhouette } from '../components/BottleSilhouette';
-import { handleFirebaseLogin } from '../services/auth';
+import { ensureUserDoc } from '../services/firestoreService';
 
 type AuthMode = 'choice' | 'emailSignIn' | 'emailSignUp' | 'forgotPassword';
 
 interface Props {
-  onAuthSuccess: (user: any) => void;
+  onAuthSuccess: () => void;
   onBack: () => void;
   onGuestContinue: () => void;
 }
@@ -45,8 +45,14 @@ export function AuthScreen({ onAuthSuccess, onBack, onGuestContinue }: Props) {
       const idToken = signInResult.data?.idToken || (signInResult as any).idToken;
 
       if (idToken) {
-        const user = await handleFirebaseLogin(idToken);
-        onAuthSuccess(user);
+        const { GoogleAuthProvider, signInWithCredential, getAuth, initializeAuth } = await import('firebase/auth');
+        const { initializeAuth: initApp } = await import('../services/firebase');
+        const app = initApp();
+        const auth = initializeAuth(app);
+        const credential = GoogleAuthProvider.credential(idToken);
+        const userCredential = await signInWithCredential(auth, credential);
+        await ensureUserDoc(userCredential.user.uid, userCredential.user.email || '');
+        onAuthSuccess();
       }
     } catch (error: any) {
       if (error.message !== 'CANCELED' && error.message !== 'SIGN_IN_CANCELLED') {
@@ -88,9 +94,8 @@ export function AuthScreen({ onAuthSuccess, onBack, onGuestContinue }: Props) {
         userCredential = await signInWithEmailAndPassword(auth, email, password);
       }
 
-      const idToken = await userCredential.user.getIdToken();
-      const user = await handleFirebaseLogin(idToken);
-      onAuthSuccess(user);
+      await ensureUserDoc(userCredential.user.uid, userCredential.user.email || '');
+      onAuthSuccess();
     } catch (error: any) {
       const message =
         error.code === 'auth/user-not-found'

@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
-import { api } from './api';
+import { updatePremiumStatus } from './firestoreService';
+import { getFirebaseAuth } from './auth';
 
 const PRODUCTS = Platform.select({
   android: {
@@ -23,11 +24,17 @@ export type SubscriptionTier = 'monthly' | 'yearly';
 
 const isAndroid = Platform.OS === 'android';
 
+async function setPremium() {
+  const auth = getFirebaseAuth();
+  const user = auth.currentUser;
+  if (user) {
+    try { await updatePremiumStatus(user.uid, true); } catch {}
+  }
+}
+
 export async function purchaseSubscription(tier: SubscriptionTier): Promise<boolean> {
   if (__DEV__) {
-    try {
-      await api.user.updatePremiumStatus(true);
-    } catch {}
+    await setPremium();
     return true;
   }
 
@@ -49,7 +56,7 @@ export async function purchaseSubscription(tier: SubscriptionTier): Promise<bool
       });
     }
 
-    await api.user.updatePremiumStatus(true);
+    await setPremium();
     return true;
   } catch (error: any) {
     if (error?.code === 'E_USER_CANCELLED' || error?.code === 'USER_CANCELLED') {
